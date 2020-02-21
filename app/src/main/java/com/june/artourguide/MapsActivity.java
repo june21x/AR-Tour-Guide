@@ -60,6 +60,11 @@ public class MapsActivity extends AppCompatActivity
     //mDefaultLocation set as Kampar
     private final LatLng mDefaultLocation = new LatLng(4.2509284,101.0585763);
 
+    private static final LatLng LOCATION_A = new LatLng(4.329377, 101.136374);
+    private static final LatLng LOCATION_B = new LatLng(4.329332, 101.135703);
+    private static final LatLng LOCATION_C = new LatLng(4.329597, 101.135443);
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

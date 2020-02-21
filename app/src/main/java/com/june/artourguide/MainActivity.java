@@ -13,6 +13,8 @@ import com.google.ar.core.ArCoreApk;
 public class MainActivity extends AppCompatActivity {
     private Button btnTestAR;
     private Button btnOpenMap;
+    private Button btnViewTour;
+    private Button btnSignUp;
     // Set to true ensures requestInstall() triggers installation if necessary.
     private boolean mUserRequestedInstall = true;
 
@@ -21,9 +23,14 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        btnTestAR = (Button) findViewById(R.id.btnTestAR);
-        btnOpenMap = (Button) findViewById(R.id.btnOpenMap);
+        btnTestAR = findViewById(R.id.btnTestAR);
+        btnOpenMap = findViewById(R.id.btnOpenMap);
+        btnViewTour = findViewById(R.id.btnViewTour);
+        btnSignUp = findViewById(R.id.btnSignUp);
+
         btnOpenMap.setOnClickListener(openMapListener);
+        btnViewTour.setOnClickListener(viewTourListener);
+        btnSignUp.setOnClickListener(signUpListener);
 
         maybeEnableArButton();
 
@@ -73,5 +80,19 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+    private View.OnClickListener viewTourListener = new View.OnClickListener() {
+        public void onClick(View v) {
+            // do something when the button is clicked
+            Intent tourListActivity = new Intent(MainActivity.this, TourListActivity.class);
+            startActivity(tourListActivity);
+        }
+    };
+
+    private View.OnClickListener signUpListener = new View.OnClickListener() {
+        public void onClick(View v) {
+            // do something when the button is clicked
+
+        }
+    };
 
 }
