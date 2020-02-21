@@ -48,7 +48,8 @@ public class MapsActivity extends AppCompatActivity
         GoogleMap.OnMyLocationButtonClickListener,
         GoogleMap.OnMyLocationClickListener,
         OnMapReadyCallback,
-        ActivityCompat.OnRequestPermissionsResultCallback {
+        ActivityCompat.OnRequestPermissionsResultCallback,
+        GoogleMap.OnMarkerClickListener {
 
     private GoogleMap mMap;
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
@@ -64,7 +65,9 @@ public class MapsActivity extends AppCompatActivity
     private static final LatLng LOCATION_B = new LatLng(4.329332, 101.135703);
     private static final LatLng LOCATION_C = new LatLng(4.329597, 101.135443);
 
-
+    private Marker mLocationA;
+    private Marker mLocationB;
+    private Marker mLocationC;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -101,6 +104,25 @@ public class MapsActivity extends AppCompatActivity
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(mDefaultLocation, DEFAULT_ZOOM));
 
         getDeviceLocation();
+
+        // Add some markers to the map, and add a data object to each marker.
+        mLocationA = mMap.addMarker(new MarkerOptions()
+                .position(LOCATION_A)
+                .title("Location A"));
+        mLocationA.setTag(0);
+
+        mLocationB = mMap.addMarker(new MarkerOptions()
+                .position(LOCATION_B)
+                .title("Location B"));
+        mLocationB.setTag(0);
+
+        mLocationC = mMap.addMarker(new MarkerOptions()
+                .position(LOCATION_C)
+                .title("Location C"));
+        mLocationA.setTag(0);
+
+        // Set a listener for marker click.
+        mMap.setOnMarkerClickListener(this);
 
     }
 
@@ -197,5 +219,20 @@ public class MapsActivity extends AppCompatActivity
             Log.e("Exception: %s", e.getMessage());
         }
     }
+
+    @Override
+    public boolean onMarkerClick(final Marker marker) {
+
+        Toast.makeText(this,
+                marker.getTitle(),
+                Toast.LENGTH_SHORT).show();
+
+
+        // Return false to indicate that we have not consumed the event and that we wish
+        // for the default behavior to occur (which is for the camera to move such that the
+        // marker is centered and for the marker's info window to open, if it has one).
+        return false;
+    }
+
 
 }
