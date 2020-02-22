@@ -56,6 +56,7 @@ public class MapsActivity extends AppCompatActivity
     private boolean mPermissionDenied = false;
     private FusedLocationProviderClient mFusedLocationProviderClient;
     private Location mLastKnownLocation;
+    private Task locationResult;
     private static final String TAG = MapsActivity.class.getSimpleName();
     private static final int DEFAULT_ZOOM = 15;
     //mDefaultLocation set as Kampar
@@ -68,6 +69,7 @@ public class MapsActivity extends AppCompatActivity
     private Marker mLocationA;
     private Marker mLocationB;
     private Marker mLocationC;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -104,25 +106,7 @@ public class MapsActivity extends AppCompatActivity
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(mDefaultLocation, DEFAULT_ZOOM));
 
         getDeviceLocation();
-
-        // Add some markers to the map, and add a data object to each marker.
-        mLocationA = mMap.addMarker(new MarkerOptions()
-                .position(LOCATION_A)
-                .title("Location A"));
-        mLocationA.setTag(0);
-
-        mLocationB = mMap.addMarker(new MarkerOptions()
-                .position(LOCATION_B)
-                .title("Location B"));
-        mLocationB.setTag(0);
-
-        mLocationC = mMap.addMarker(new MarkerOptions()
-                .position(LOCATION_C)
-                .title("Location C"));
-        mLocationA.setTag(0);
-
-        // Set a listener for marker click.
-        mMap.setOnMarkerClickListener(this);
+        addMarkers();
 
     }
 
@@ -196,7 +180,7 @@ public class MapsActivity extends AppCompatActivity
          */
         try {
             if (!mPermissionDenied) {
-                Task locationResult = mFusedLocationProviderClient.getLastLocation();
+                locationResult = mFusedLocationProviderClient.getLastLocation();
                 locationResult.addOnCompleteListener(this, new OnCompleteListener() {
                     @Override
                     public void onComplete(@NonNull Task task) {
@@ -206,6 +190,7 @@ public class MapsActivity extends AppCompatActivity
                             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
                                     new LatLng(mLastKnownLocation.getLatitude(),
                                             mLastKnownLocation.getLongitude()), DEFAULT_ZOOM));
+                            getDirections();
                         } else {
                             Log.d(TAG, "Current location is null. Using defaults.");
                             Log.e(TAG, "Exception: %s", task.getException());
@@ -232,6 +217,59 @@ public class MapsActivity extends AppCompatActivity
         // for the default behavior to occur (which is for the camera to move such that the
         // marker is centered and for the marker's info window to open, if it has one).
         return false;
+    }
+
+    public void addMarkers() {
+        // Add some markers to the map, and add a data object to each marker.
+        mLocationA = mMap.addMarker(new MarkerOptions()
+                .position(LOCATION_A)
+                .title("Location A"));
+        mLocationA.setTag(0);
+
+        mLocationB = mMap.addMarker(new MarkerOptions()
+                .position(LOCATION_B)
+                .title("Location B"));
+        mLocationB.setTag(0);
+
+        mLocationC = mMap.addMarker(new MarkerOptions()
+                .position(LOCATION_C)
+                .title("Location C"));
+        mLocationA.setTag(0);
+
+        // Set a listener for marker click.
+        mMap.setOnMarkerClickListener(this);
+    }
+
+    public void getDirections() {
+        Log.d("mLastKnownLocation", mLastKnownLocation + "");
+
+        String directionsBaseURL = "https://maps.googleapis.com/maps/api/directions/json?";
+        String APIkey = getResources().getString(R.string.google_maps_key);
+        String origin = mLastKnownLocation.getLatitude() + "," + mLastKnownLocation.getLongitude();
+        String destination = LOCATION_C.latitude + "," + LOCATION_C.longitude;
+        LatLng[] waypoints = {LOCATION_A, LOCATION_B};
+
+        String strWaypoints = "";
+
+        for (int i = 0; i < waypoints.length; i++) {
+            strWaypoints += waypoints[i].latitude + "," + waypoints[i].longitude;
+
+            if (i < waypoints.length - 1) {
+                strWaypoints += "|";
+            }
+        }
+
+        Log.d("strWayPoints", strWaypoints);
+
+        String directionsURL = directionsBaseURL
+                + "origin=" + origin
+                + "destination=" + destination
+                + "&waypoints=" + strWaypoints
+                + "&key=" + APIkey;
+
+        Log.d("directionsURL", directionsURL);
+
+
     }
 
 
