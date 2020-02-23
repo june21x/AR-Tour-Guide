@@ -4,6 +4,13 @@ import androidx.fragment.app.FragmentActivity;
 
 import android.os.Bundle;
 
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -14,6 +21,8 @@ import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.libraries.places.api.Places;
@@ -35,6 +44,12 @@ import androidx.appcompat.app.AlertDialog;
 
 import android.util.Log;
 import android.widget.Toast;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import android.view.Menu;
@@ -42,6 +57,14 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.TextView;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import javax.net.ssl.HttpsURLConnection;
+import java.net.URL;
+import java.io.OutputStream;
+import java.io.PrintStream;
 
 public class MapsActivity extends AppCompatActivity
         implements
@@ -58,7 +81,7 @@ public class MapsActivity extends AppCompatActivity
     private Location mLastKnownLocation;
     private Task locationResult;
     private static final String TAG = MapsActivity.class.getSimpleName();
-    private static final int DEFAULT_ZOOM = 15;
+    private static final int DEFAULT_ZOOM = 18;
     //mDefaultLocation set as Kampar
     private final LatLng mDefaultLocation = new LatLng(4.2509284,101.0585763);
 
@@ -70,6 +93,8 @@ public class MapsActivity extends AppCompatActivity
     private Marker mLocationB;
     private Marker mLocationC;
 
+    private static final String directionsTag = "Directions API Request";
+    private JSONObject directionsJSON;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -241,8 +266,6 @@ public class MapsActivity extends AppCompatActivity
     }
 
     public void getDirections() {
-        Log.d("mLastKnownLocation", mLastKnownLocation + "");
-
         String directionsBaseURL = "https://maps.googleapis.com/maps/api/directions/json?";
         String APIkey = getResources().getString(R.string.google_maps_key);
         String origin = mLastKnownLocation.getLatitude() + "," + mLastKnownLocation.getLongitude();
@@ -259,18 +282,104 @@ public class MapsActivity extends AppCompatActivity
             }
         }
 
-        Log.d("strWayPoints", strWaypoints);
-
         String directionsURL = directionsBaseURL
                 + "origin=" + origin
-                + "destination=" + destination
+                + "&destination=" + destination
                 + "&waypoints=" + strWaypoints
                 + "&key=" + APIkey;
 
         Log.d("directionsURL", directionsURL);
 
+        // Instantiate the RequestQueue.
+        RequestQueue queue = Volley.newRequestQueue(this);
+
+        // Request a json response from the provided URL.
+        final JsonObjectRequest directionsJSONRequest = new JsonObjectRequest
+                (Request.Method.GET, directionsURL, null, new Response.Listener<JSONObject>() {
+
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        Log.d(directionsTag, "Response: " + response.toString());
+                        directionsJSON = response;
+                        try {
+                            JSONArray routes = directionsJSON.getJSONArray("routes");
+                            JSONObject route = routes.getJSONObject(0);
+                            JSONObject overviewPolyline = route.getJSONObject("overview_polyline");
+                            String encodedPoints = overviewPolyline.getString("points");
+                            List<LatLng> decodedPoints = decodePoly(encodedPoints);
+
+                            //Create PolylineOptions
+                            PolylineOptions polylineOptions = new PolylineOptions();
+
+                            for (int i = 0; i < decodedPoints.size(); i++) {
+                                polylineOptions.add(decodedPoints.get(i));
+                            }
+
+                            // Add polylines to the map.
+                            // Polylines are useful to show a route or some other connection between points.
+                            Polyline polyline1 = mMap.addPolyline(polylineOptions);
+
+                            //Store a data object with the polyline, used here to indicate an arbitrary type.
+                            polyline1.setTag("Route A");
+
+
+
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+
+                    }
+                }, new Response.ErrorListener() {
+
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Log.d(directionsTag, error.toString());
+
+                    }
+                });
+
+
+        // Set the tag on the request.
+        directionsJSONRequest.setTag(directionsTag);
+
+        // Add the request to the RequestQueue.
+        queue.add(directionsJSONRequest);
+
 
     }
 
+    private List<LatLng> decodePoly(String encoded) {
+
+        List<LatLng> poly = new ArrayList<>();
+        int index = 0, len = encoded.length();
+        int lat = 0, lng = 0;
+
+        while (index < len) {
+            int b, shift = 0, result = 0;
+            do {
+                b = encoded.charAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
+            } while (b >= 0x20);
+            int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+            lat += dlat;
+
+            shift = 0;
+            result = 0;
+            do {
+                b = encoded.charAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
+            } while (b >= 0x20);
+            int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+            lng += dlng;
+
+            LatLng p = new LatLng((((double) lat / 1E5)),
+                    (((double) lng / 1E5)));
+            poly.add(p);
+        }
+
+        return poly;
+    }
 
 }
