@@ -28,6 +28,7 @@ public class MainActivity extends AppCompatActivity {
         btnViewTour = findViewById(R.id.btnViewTour);
         btnSignUp = findViewById(R.id.btnSignUp);
 
+        btnTestAR.setOnClickListener(openARListener);
         btnOpenMap.setOnClickListener(openMapListener);
         btnViewTour.setOnClickListener(viewTourListener);
         btnSignUp.setOnClickListener(signUpListener);
@@ -71,6 +72,14 @@ public class MainActivity extends AppCompatActivity {
             finish();
         }
     }
+
+    private View.OnClickListener openARListener = new View.OnClickListener() {
+        public void onClick(View v) {
+            // do something when the button is clicked
+            Intent arActivity = new Intent(MainActivity.this, ARActivity.class);
+            startActivity(arActivity);
+        }
+    };
 
     private View.OnClickListener openMapListener = new View.OnClickListener() {
         public void onClick(View v) {

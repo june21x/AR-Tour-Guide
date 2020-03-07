@@ -18,9 +18,12 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.CameraPosition;
+import com.google.android.gms.maps.model.Dot;
+import com.google.android.gms.maps.model.Gap;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.PatternItem;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
@@ -96,6 +99,12 @@ public class MapsActivity extends AppCompatActivity
     private static final String directionsTag = "Directions API Request";
     private JSONObject directionsJSON;
 
+    private static final int POLYLINE_STROKE_WIDTH_PX = 12;
+    private static final int PATTERN_GAP_LENGTH_PX = 20;
+    private static final PatternItem DOT = new Dot();
+    private static final PatternItem GAP = new Gap(PATTERN_GAP_LENGTH_PX);
+    private static final List<PatternItem> PATTERN_POLYLINE_DOTTED = Arrays.asList(GAP, DOT);
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -129,6 +138,7 @@ public class MapsActivity extends AppCompatActivity
         mMap.setOnMyLocationClickListener(this);
         enableMyLocation();
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(mDefaultLocation, DEFAULT_ZOOM));
+        mMap.setBuildingsEnabled(true);
 
         getDeviceLocation();
         addMarkers();
@@ -150,7 +160,7 @@ public class MapsActivity extends AppCompatActivity
     @Override
     public boolean onMyLocationButtonClick() {
         Toast.makeText(this, "MyLocation button clicked", Toast.LENGTH_SHORT).show();
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
                 new LatLng(mLastKnownLocation.getLatitude(),
                         mLastKnownLocation.getLongitude()), DEFAULT_ZOOM));
         // Return false so that we don't consume the event and the default behavior still occurs
@@ -209,21 +219,25 @@ public class MapsActivity extends AppCompatActivity
                 locationResult.addOnCompleteListener(this, new OnCompleteListener() {
                     @Override
                     public void onComplete(@NonNull Task task) {
-                        if (task.isSuccessful()) {
+                        if (task.isSuccessful() && task.getResult() != null) {
                             // Set the map's camera position to the current location of the device.
                             mLastKnownLocation = (Location)task.getResult();
-                            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(
                                     new LatLng(mLastKnownLocation.getLatitude(),
                                             mLastKnownLocation.getLongitude()), DEFAULT_ZOOM));
                             getDirections();
                         } else {
                             Log.d(TAG, "Current location is null. Using defaults.");
-                            Log.e(TAG, "Exception: %s", task.getException());
+                            Log.e(TAG, "Exception: " + task.getException());
                             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(mDefaultLocation, DEFAULT_ZOOM));
                             mMap.getUiSettings().setMyLocationButtonEnabled(false);
+                            showMissingPermissionError();
                         }
                     }
                 });
+            }
+            else {
+                showMissingPermissionError();
             }
         } catch(SecurityException e)  {
             Log.e("Exception: %s", e.getMessage());
@@ -271,6 +285,7 @@ public class MapsActivity extends AppCompatActivity
         String origin = mLastKnownLocation.getLatitude() + "," + mLastKnownLocation.getLongitude();
         String destination = LOCATION_C.latitude + "," + LOCATION_C.longitude;
         LatLng[] waypoints = {LOCATION_A, LOCATION_B};
+        String mode = "walking";
 
         String strWaypoints = "";
 
@@ -286,6 +301,7 @@ public class MapsActivity extends AppCompatActivity
                 + "origin=" + origin
                 + "&destination=" + destination
                 + "&waypoints=" + strWaypoints
+                + "&mode=" + mode
                 + "&key=" + APIkey;
 
         Log.d("directionsURL", directionsURL);
@@ -310,6 +326,8 @@ public class MapsActivity extends AppCompatActivity
 
                             //Create PolylineOptions
                             PolylineOptions polylineOptions = new PolylineOptions();
+                            polylineOptions.width(POLYLINE_STROKE_WIDTH_PX);
+                            polylineOptions.pattern(PATTERN_POLYLINE_DOTTED);
 
                             for (int i = 0; i < decodedPoints.size(); i++) {
                                 polylineOptions.add(decodedPoints.get(i));
@@ -350,7 +368,7 @@ public class MapsActivity extends AppCompatActivity
 
     private List<LatLng> decodePoly(String encoded) {
 
-        List<LatLng> poly = new ArrayList<>();
+        List<LatLng> poly = new ArrayList<LatLng>();
         int index = 0, len = encoded.length();
         int lat = 0, lng = 0;
 
